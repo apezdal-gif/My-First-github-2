@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Block Tales</title>
+  <style>
+    body { margin: 0; background: #222; color: white; font-family: sans-serif; }
+    canvas { background: #333; display: block; margin: 0 auto; border: 2px solid #555; }
+    #ui { text-align: center; padding: 10px; }
+  </style>
+</head>
+<body>
+  <div id="ui">⭐ Зібрано зірок: <span id="stars">0</span></div>
+  <canvas id="game" width="600" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const gravity = 0.5;
+    const keys = {};
+    let collected = 0;
+
+    const player = {
+      x: 50, y: 300, width: 30, height: 30,
+      vx: 0, vy: 0,
+      grounded: false
+    };
+
+    const platforms = [
+      { x: 0, y: 370, width: 600, height: 30 },
+      { x: 100, y: 300, width: 100, height: 10 },
+      { x: 250, y: 250, width: 100, height: 10 },
+      { x: 400, y: 200, width: 100, height: 10 }
+    ];
+
+    const spikes = [
+      { x: 200, y: 360, size: 20 },
+      { x: 350, y: 360, size: 20 }
+    ];
+
+    const stars = [
+      { x: 110, y: 270, collected: false },
+      { x: 410, y: 170, collected: false }
+    ];
+
+    document.addEventListener("keydown", e => keys[e.key] = true);
+    document.addEventListener("keyup", e => keys[e.key] = false);
+
+    function rectsCollide(a, b) {
+      return a.x < b.x + b.width &&
+             a.x + a.width > b.x &&
+             a.y < b.y + b.height &&
+             a.y + a.height > b.y;
+    }
+
+    function update() {
+      // Рух
+      player.vx = 0;
+      if (keys["a"]) player.vx = -3;
+      if (keys["d"]) player.vx = 3;
+
+      player.vy += gravity;
+      player.x += player.vx;
+      player.y += player.vy;
+      player.grounded = false;
+
+      // Колізії з платформами
+      platforms.forEach(p => {
+        if (rectsCollide(player, p)) {
+          if (player.vy > 0) {
+            player.y = p.y - player.height;
+            player.vy = 0;
+            player.grounded = true;
+          }
+        }
+      });
+
+      // Стрибок
+      if (keys[" "] && player.grounded) {
+        player.vy = -10;
+      }
+
+      // Шипи = смерть
+      spikes.forEach(s => {
+        if (player.x + player.width > s.x && player.x < s.x + s.size &&
+            player.y + player.height > s.y && player.y < s.y + s.size) {
+          alert("💀 Ти загинув!");
+          location.reload();
+        }
+      });
+
+      // Збір зірок
+      stars.forEach(star => {
+        if (!star.collected &&
+            player.x < star.x + 15 &&
+            player.x + player.width > star.x &&
+            player.y < star.y + 15 &&
+            player.y + player.height > star.y) {
+          star.collected = true;
+          collected++;
+          document.getElementById("stars").textContent = collected;
+        }
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Гравець
+      ctx.fillStyle = "cyan";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      // Платформи
+      ctx.fillStyle = "gray";
+      platforms.forEach(p => {
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+      });
+
+      // Шипи
+      ctx.fillStyle = "red";
+      spikes.forEach(s => {
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y + s.size);
+        ctx.lineTo(s.x + s.size / 2, s.y);
+        ctx.lineTo(s.x + s.size, s.y + s.size);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // Зірки
+      ctx.fillStyle = "gold";
+      stars.forEach(s => {
+        if (!s.collected) {
+          ctx.beginPath();
+          ctx.arc(s.x + 7, s.y + 7, 7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>
